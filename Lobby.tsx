@@ -10,7 +10,7 @@ enum ConnectionStatuses {
 }
 
 export default function Lobby() {
-    const connectionStatus = useWebSocket('ws://localhost:8181')
+    const { connectionStatus, socketDataBuffer } = useWebSocket('ws://localhost:8181')
 
     return (
         <PaperProvider>
@@ -19,20 +19,17 @@ export default function Lobby() {
                     {ConnectionStatuses[connectionStatus ?? ConnectionStatuses.Disconnected]}
                 </Chip>
                 <Card>
-                    <Card.Title title="Offers" />
+                    <Card.Title title={`Offers (${socketDataBuffer?.count ?? 0} connected)`} />
                     <Card.Content>
                         <DataTable>
                             <DataTable.Header>
-                                <DataTable.Title>Name</DataTable.Title>
-                                <DataTable.Title>Price</DataTable.Title>
-                                <DataTable.Title numeric>Quantity</DataTable.Title>
+                                <DataTable.Title>Socket Guid</DataTable.Title>
                             </DataTable.Header>
-
-                            <DataTable.Row>
-                                <DataTable.Cell>Item 1</DataTable.Cell>
-                                <DataTable.Cell>$10</DataTable.Cell>
-                                <DataTable.Cell numeric>5</DataTable.Cell>
-                            </DataTable.Row>
+                            {socketDataBuffer?.connectedIds?.map((socketId) => (
+                                <DataTable.Row key={socketId}>
+                                    <DataTable.Cell>{socketId}</DataTable.Cell>
+                                </DataTable.Row>
+                            )) ?? null}
                         </DataTable>
                     </Card.Content>
                 </Card>

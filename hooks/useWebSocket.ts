@@ -5,6 +5,7 @@ export function useWebSocket(url: string) {
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [connectionStatus, setConnectionStatus] = useState<number | null>(webSocketRef.current?.readyState! ?? 3);
+    const [socketDataBuffer, setSocketDataBuffer] = useState({});
     const clearTimers = () => {
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
@@ -30,8 +31,15 @@ export function useWebSocket(url: string) {
             webSocket.onmessage = (e) => {
                 console.log("On message was triggered..." + e.data)
                 const message = JSON.parse(e.data);
+
                 if (message.type === "pong") {
                     if (timeoutRef.current) clearTimeout(timeoutRef.current)
+                } else if (message.type === "connections") {
+                    // Now handle the structured connections data
+                    setSocketDataBuffer(message);
+                } else {
+                    // Handle other message types (echo, error, etc.)
+                    setSocketDataBuffer(message);
                 }
             }
         }
@@ -48,8 +56,11 @@ export function useWebSocket(url: string) {
             }, 3000);
         }, 6000);
 
-        return clearTimers
+        return () => {
+            clearTimers();
+            webSocket.close();
+        }
     }, []);
 
-    return connectionStatus;
+    return { connectionStatus, socketDataBuffer };
 }
