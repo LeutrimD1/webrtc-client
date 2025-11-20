@@ -1,11 +1,15 @@
 import { useEffect, useState, useRef } from "react";
 
+interface ServerState {
+    sockets: { socketGuid: string, offer: string, answer: string, targetSocketGuid: string }[],
+}
+
 export function useWebSocket(url: string) {
     const webSocketRef = useRef<WebSocket | null>(null);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [connectionStatus, setConnectionStatus] = useState<number | null>(webSocketRef.current?.readyState! ?? 3);
-    const [socketDataBuffer, setSocketDataBuffer] = useState({});
+    const [socketDataBuffer, setSocketDataBuffer] = useState<ServerState>({ sockets: [] });
     const clearTimers = () => {
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
@@ -29,16 +33,12 @@ export function useWebSocket(url: string) {
                 console.log("Socket error: " + JSON.stringify(e));
             }
             webSocket.onmessage = (e) => {
-                console.log("On message was triggered..." + e.data)
+                console.log("New message: " + e.data)
                 const message = JSON.parse(e.data);
 
                 if (message.type === "pong") {
                     if (timeoutRef.current) clearTimeout(timeoutRef.current)
-                } else if (message.type === "connections") {
-                    // Now handle the structured connections data
-                    setSocketDataBuffer(message);
-                } else {
-                    // Handle other message types (echo, error, etc.)
+                }  else {
                     setSocketDataBuffer(message);
                 }
             }

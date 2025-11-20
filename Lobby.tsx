@@ -15,19 +15,24 @@ export default function Lobby() {
     return (
         <PaperProvider>
             <View style={styles.layout}>
+                <Button mode='contained' onPress={() => console.log("press")}>Create offer</Button>
                 <Chip style={styles.chip}>
                     {ConnectionStatuses[connectionStatus ?? ConnectionStatuses.Disconnected]}
                 </Chip>
                 <Card>
-                    <Card.Title title={`Offers (${socketDataBuffer?.count ?? 0} connected)`} />
+                    <Card.Title title={`Users (${socketDataBuffer.sockets.length} connected)`} />
                     <Card.Content>
                         <DataTable>
                             <DataTable.Header>
                                 <DataTable.Title>Socket Guid</DataTable.Title>
+                                <DataTable.Title>Offer</DataTable.Title>
+                                <DataTable.Title> </DataTable.Title>
                             </DataTable.Header>
-                            {socketDataBuffer?.connectedIds?.map((socketId) => (
-                                <DataTable.Row key={socketId}>
-                                    <DataTable.Cell>{socketId}</DataTable.Cell>
+                            {socketDataBuffer.sockets.map((socket) => (
+                                <DataTable.Row key={socket.socketGuid}>
+                                    <DataTable.Cell>{socket.socketGuid}</DataTable.Cell>
+                                    <DataTable.Cell>{socket.offer}</DataTable.Cell>
+                                    <DataTable.Cell><Button mode='contained'>Send answer</Button></DataTable.Cell>
                                 </DataTable.Row>
                             )) ?? null}
                         </DataTable>
