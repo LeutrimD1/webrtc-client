@@ -1,23 +1,25 @@
-import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Chip, PaperProvider, Card, DataTable } from 'react-native-paper';
+import { Chip, PaperProvider, Card, DataTable, Button } from 'react-native-paper';
+import { useWebSocket } from './hooks/useWebSocket';
 
+enum ConnectionStatuses {
+    Connecting = 0,
+    Connected = 1,
+    Disconnecting = 2,
+    Disconnected = 3
+}
 
 export default function Lobby() {
-    const [isConnected, setIsConnected] = useState(false);
+    const connectionStatus = useWebSocket('ws://localhost:8181')
 
-    useEffect(() => {
-        const websocket = new WebSocket('ws://localhost:8080');
-        
-    }, []);
     return (
         <PaperProvider>
             <View style={styles.layout}>
                 <Chip style={styles.chip}>
-                    {isConnected ? 'Connected' : 'Connecting...'}
+                    {ConnectionStatuses[connectionStatus ?? ConnectionStatuses.Disconnected]}
                 </Chip>
                 <Card>
-                    <Card.Title title="Offers"/>
+                    <Card.Title title="Offers" />
                     <Card.Content>
                         <DataTable>
                             <DataTable.Header>
