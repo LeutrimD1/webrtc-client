@@ -1,7 +1,7 @@
 import { StyleSheet, Platform } from 'react-native';
 import { PaperProvider, Button } from 'react-native-paper';
 import Lobby from './Lobby';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import ActiveChat from './ActiveChat';
 import { RTCPeerConnection } from './WebRTCAdapter'
 import { Provider } from 'react-redux';
@@ -9,12 +9,14 @@ import store from './store';
 
 export default function App() {
   const [isChatting, setIsChatting] = useState(false);
+  const connectionRef = useRef<RTCPeerConnection | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
         const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
         const connection = new RTCPeerConnection(configuration);
+        connectionRef.current = connection;
         const candidates: any[] = [];
 
         connection.onicecandidate = (event: any) => {
