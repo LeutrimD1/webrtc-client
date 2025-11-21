@@ -1,9 +1,9 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { PaperProvider, Button } from 'react-native-paper';
 import Lobby from './Lobby';
 import { useEffect, useState } from 'react';
 import ActiveChat from './ActiveChat';
-import { RTCPeerConnection } from 'react-native-webrtc';
+import { RTCPeerConnection } from './WebRTCAdapter'
 import { Provider } from 'react-redux';
 import store from './store';
 
@@ -12,24 +12,46 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-      const peerConnection = new RTCPeerConnection(configuration) as any;
-      const iceCandidates: any[] = [];
-      const waitForIce = new Promise<void>((resolve) => {
-        peerConnection.onicecandidate = (event: any) => {
-          if (event.candidate) {
-            iceCandidates.push(event.candidate);
-          } else {
-            resolve();
+      try {
+        const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        const connection = new RTCPeerConnection(configuration);
+        const candidates: any[] = [];
+
+        connection.onicecandidate = (event: any) => {
+          if (event?.candidate) {
+            candidates.push(event.candidate);
           }
         };
-      });
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-      await waitForIce;
-      const finalOffer = { ...peerConnection.localDescription };
-      finalOffer.sdp += "\n" + iceCandidates.map((c) => `a=${c.candidate}`).join("\n");
-      console.log("Final offer with all ICE candidates:", finalOffer);
+
+        connection.createDataChannel('chat');
+
+        const offer = await connection.createOffer();
+        await connection.setLocalDescription(offer);
+
+        await new Promise<void>((resolve) => {
+          if (connection.iceGatheringState === 'complete') {
+            resolve();
+          } else {
+            const onGatheringComplete = () => {
+              if (connection.iceGatheringState === 'complete') {
+                connection.removeEventListener('icegatheringstatechange', onGatheringComplete);
+                resolve();
+              }
+            };
+            connection.addEventListener('icegatheringstatechange', onGatheringComplete);
+            setTimeout(resolve, 5000);
+          }
+        });
+
+        const finalOffer = {
+          type: offer.type || 'offer',
+          sdp: connection.localDescription?.sdp || offer.sdp || ''
+        };
+
+        console.log('Final offer with', candidates.length, 'ICE candidates:', finalOffer);
+      } catch (error) {
+        console.error('WebRTC error:', error);
+      }
     })();
   }, []);
   return (
