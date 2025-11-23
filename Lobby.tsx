@@ -1,6 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 import { Chip, PaperProvider, Card, DataTable, Button } from 'react-native-paper';
 import { useWebSocket } from './hooks/useWebSocket';
+import { useSelector } from 'react-redux';
+import { useEffect } from 'react';
 
 enum ConnectionStatuses {
     Connecting = 0,
@@ -10,7 +12,18 @@ enum ConnectionStatuses {
 }
 
 export default function Lobby() {
-    const { connectionStatus, socketDataBuffer } = useWebSocket('ws://localhost:8181')
+    const { connectionStatus, socketDataBuffer, webSocketRef } = useWebSocket('ws://localhost:8181');
+
+    const offer = useSelector(
+        (state: { rtcConnection: { offer: RTCSessionDescriptionInit | null } }) =>
+            state.rtcConnection.offer
+    );
+
+    useEffect(() => {
+        if (connectionStatus == 1) {
+            webSocketRef.current?.send(JSON.stringify({offer: offer?.sdp!}))
+        }
+    }, [offer]);
 
     return (
         <PaperProvider>

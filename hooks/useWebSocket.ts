@@ -62,5 +62,5 @@ export function useWebSocket(url: string) {
         }
     }, []);
 
-    return { connectionStatus, socketDataBuffer };
+    return { connectionStatus, socketDataBuffer, webSocketRef };
 }
