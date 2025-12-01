@@ -19,6 +19,7 @@
     "react-native-paper": "^5.14.5",
     "react-native-web": "^0.21.0",
     "react-native-webrtc": "^124.0.7",
+    "react-native-webrtc-web-shim": "^1.0.7",
     "react-redux": "^9.2.0"
   },
   "devDependencies": {

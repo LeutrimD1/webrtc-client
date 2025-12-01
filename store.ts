@@ -1,29 +1,45 @@
-import { configureStore, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { configureStore, createSlice } from "@reduxjs/toolkit";
 
-interface WebRTCState {
-    connectionRef: RTCPeerConnection | null;
-    offer: RTCSessionDescriptionInit | null;
-};
-
-const initialState: WebRTCState = {
-    connectionRef: null,
-    offer: null
-}
-
-const rtcConnectionSlice = createSlice({
-    name: "rtcConnection",
-    initialState,
+const self = createSlice({
+    name: "self",
+    initialState: {
+        socketGuid: ""
+    },
     reducers: {
-        setOffer(state, action: PayloadAction<RTCSessionDescriptionInit | null>) {
-            state.offer = action.payload;
-        },
+        setSocketGuid(state, action) {
+            return ({
+                ...state,
+                socketGuid: action.payload
+            })
+        }
     }
 });
 
-export const { setOffer } = rtcConnectionSlice.actions;
+const signalServer = createSlice({
+    name: "signalServer",
+    initialState: {
+        sockets: []
+    },
+    reducers: {
+        updateServerState(state, action) {
+            return ({
+                ...state,
+                ...action.payload
+            })
+        }
+    }
+});
+
+
+export const selectSocketId = (state: {localData: {socketConnectionGuid: string}}) => state.localData.socketConnectionGuid;
+export const selectConnectionStatus = (state: {signalServer: {connectionStatus: number}}) => state.signalServer.connectionStatus;
+
+export const signalServerActions = signalServer.actions;
+export const selfActions = self.actions;
 
 export const store = configureStore({
     reducer: {
-        rtcConnection: rtcConnectionSlice.reducer
+        signalServer: signalServer.reducer,
+        self: self.reducer
     }
 });

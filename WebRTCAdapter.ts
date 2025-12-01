@@ -1,24 +1,24 @@
-// WebRTCAdapter.js
+// WebRTCAdapter.ts
 import { Platform } from 'react-native';
 
-let RTCPeerConnection: typeof window.RTCPeerConnection;
-let RTCSessionDescription: typeof window.RTCSessionDescription;
-let RTCIceCandidate: typeof window.RTCIceCandidate;
-let mediaDevices: MediaDevices;
+// Type definitions
+export type RTCPeerConnectionType = typeof RTCPeerConnection;
+export type RTCPeerConnectionInstance = RTCPeerConnection;
+export type RTCIceCandidate = any;
+export type RTCSessionDescription = any;
+
+let RTCPeerConnection: RTCPeerConnectionType;
+let mediaDevices: any;
 
 if (Platform.OS === 'web') {
-  // Use browser's native WebRTC
+  // Browser environment
   RTCPeerConnection = window.RTCPeerConnection;
-  RTCSessionDescription = window.RTCSessionDescription;
-  RTCIceCandidate = window.RTCIceCandidate;
   mediaDevices = navigator.mediaDevices;
 } else {
-  // Use react-native-webrtc for mobile
-  const WebRTC = require('react-native-webrtc');
-  RTCPeerConnection = WebRTC.RTCPeerConnection;
-  RTCSessionDescription = WebRTC.RTCSessionDescription;
-  RTCIceCandidate = WebRTC.RTCIceCandidate;
-  mediaDevices = WebRTC.mediaDevices;
+  // React Native environment
+  const mobile = require('react-native-webrtc');
+  RTCPeerConnection = mobile.RTCPeerConnection;
+  mediaDevices = mobile.mediaDevices;
 }
 
-export { RTCPeerConnection, RTCSessionDescription, RTCIceCandidate, mediaDevices };
+export { RTCPeerConnection, mediaDevices };

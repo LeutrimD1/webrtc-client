@@ -1,66 +1,42 @@
-import { StyleSheet } from 'react-native';
-import { PaperProvider, Button } from 'react-native-paper';
-import Lobby from './Lobby';
-import { useEffect, useState, useRef } from 'react';
-import ActiveChat from './ActiveChat';
-import { RTCPeerConnection } from './WebRTCAdapter'
+import { StyleSheet, Platform, View, Text } from 'react-native';
+import { PaperProvider } from 'react-native-paper';
+import Lobby from './states/Lobby';
+import useWebSocket from './hooks/useWebSocket';
+import useWebRTC from './hooks/useWebRTC';
+import ActiveChat from './states/ActiveChat';
 import { useDispatch } from 'react-redux';
-import { setOffer } from './store';
 
 export default function App() {
-  const [isChatting, setIsChatting] = useState(false);
-  const connectionRef = useRef<RTCPeerConnection | null>(null);
   const dispatch = useDispatch();
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-        const connection = new RTCPeerConnection(configuration);
-        connectionRef.current = connection;
-        const candidates: any[] = [];
-
-        connection.onicecandidate = (event: any) => {
-          if (event?.candidate) {
-            candidates.push(event.candidate);
-          }
-        };
-
-        connection.createDataChannel('chat');
-
-        const offer = await connection.createOffer();
-        await connection.setLocalDescription(offer);
-
-        await new Promise<void>((resolve) => {
-          if (connection.iceGatheringState === 'complete') {
-            resolve();
-          } else {
-            const onGatheringComplete = () => {
-              if (connection.iceGatheringState === 'complete') {
-                connection.removeEventListener('icegatheringstatechange', onGatheringComplete);
-                resolve();
-              }
-            };
-            connection.addEventListener('icegatheringstatechange', onGatheringComplete);
-            setTimeout(resolve, 5000);
-          }
-        });
-
-        const finalOffer = {
-          type: offer.type || 'offer',
-          sdp: connection.localDescription?.sdp || offer.sdp || ''
-        };
-
-        dispatch(setOffer(finalOffer));
-      } catch (error) {
-        console.error('WebRTC error:', error);
-      }
-    })();
-  }, []);
+  const onMessage = (event: MessageEvent) => {
+    const data = JSON.parse(event.data);
+    //console.log("Message received:", data);
+    switch (data.type) {
+      case "id":
+        dispatch({ type: 'self/setSocketGuid', payload: data.value });
+        break;
+      case "state":
+        dispatch({ type: 'signalServer/updateServerState', payload: { sockets: data.sockets } });
+        break;
+      case "answer":
+        // Handle incoming answer
+        if (webRTCRef.current && data.answer) {
+          webRTCRef.current.setRemoteDescription(
+            new RTCSessionDescription({ type: "answer", sdp: data.answer })
+          ).catch(err => console.error("Error setting remote description:", err));
+        }
+        break;
+      default:
+        break;
+    }
+  }
+  const { connectionStatus: webSocketConnectionStatus, socketRef } = useWebSocket("ws://localhost:8181", onMessage);
+  const { connectionStatus: webRTCConnectionStatus, webRTCRef } = useWebRTC(Platform.OS, socketRef);
+  // When Lobby or ActiveChat unmounts, its data gets reset.
   return (
     <PaperProvider>
-      <Button mode='contained' onPressIn={() => setIsChatting(true)} onPressOut={() => setIsChatting(false)}>chatting</Button>
-      {isChatting ? <ActiveChat /> : <Lobby />}
+      {webRTCConnectionStatus !== "connected" ?
+        (webSocketConnectionStatus === 1 ? <Lobby webRTCRef={webRTCRef} socketRef={socketRef} /> : <View><Text>Connecting...</Text></View>) : <ActiveChat />}
     </PaperProvider>
   );
 }
