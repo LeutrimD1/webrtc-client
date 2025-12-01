@@ -1,7 +1,8 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { PaperProvider, TextInput, Card, Text } from 'react-native-paper';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from "react-redux";
 
 type Message = {
   id: string;
@@ -10,23 +11,50 @@ type Message = {
   sender: 'user' | 'other';
 };
 
-export default function ActiveChat() {
-  const [messages, setMessages] = useState<Message[]>([
-    { id: '1', text: 'Hello! How are you?', timestamp: new Date(), sender: 'other' },
-    { id: '2', text: 'I\'m doing great, thanks!', timestamp: new Date(), sender: 'user' },
-  ]);
+export default function ActiveChat(props: { webRTCRef: React.RefObject<RTCPeerConnection | null>, dataChannelRef: React.RefObject<RTCDataChannel | null> }) {
+  const dispatch = useDispatch();
+  const chatHistory = useSelector((state: any) => state.chatHistory.messages);
   const [inputText, setInputText] = useState('');
+
+  // Set up message handler when datachannel is available
+  useEffect(() => {
+    if (props.dataChannelRef.current) {
+      console.log("Setting up message handler");
+      props.dataChannelRef.current.onmessage = (event) => {
+        console.log("Received message via data channel:", event.data);
+        dispatch({ 
+          type: 'chatHistory/addMessage', 
+          payload: { 
+            text: event.data, 
+            sender: 'other', 
+            timestamp: new Date() 
+          } 
+        });
+      };
+    }
+  }, [props.dataChannelRef.current, dispatch]);
 
   const handleSend = () => {
     if (inputText.trim()) {
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        text: inputText.trim(),
-        timestamp: new Date(),
-        sender: 'user',
-      };
-      setMessages([...messages, newMessage]);
-      setInputText('');
+      console.log("Send button pressed");
+      console.log("DataChannel exists:", !!props.dataChannelRef.current);
+      console.log("DataChannel readyState:", props.dataChannelRef.current?.readyState);
+
+      if (props.dataChannelRef.current?.readyState === 'open') {
+        console.log("Sending message:", inputText);
+        props.dataChannelRef.current.send(inputText.trim());
+        dispatch({ 
+          type: 'chatHistory/addMessage', 
+          payload: { 
+            text: inputText.trim(), 
+            sender: 'user', 
+            timestamp: new Date() 
+          } 
+        });
+        setInputText('');
+      } else {
+        console.log("DataChannel not open!");
+      }
     }
   };
 
@@ -46,7 +74,7 @@ export default function ActiveChat() {
             {item.text}
           </Text>
           <Text style={styles.timestamp}>
-            {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
         </Card.Content>
       </Card>
@@ -61,7 +89,7 @@ export default function ActiveChat() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <StatusBar style="auto" />
-        
+
         {/* Chat Header */}
         <View style={styles.header}>
           <Text variant="headlineSmall" style={styles.headerText}>Chat</Text>
@@ -69,9 +97,9 @@ export default function ActiveChat() {
 
         {/* Messages List */}
         <FlatList
-          data={messages}
+          data={chatHistory}
           renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => item.id || index.toString()}
           style={styles.messagesList}
           contentContainerStyle={styles.messagesContent}
         />

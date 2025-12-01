@@ -5,6 +5,7 @@ import useWebSocket from './hooks/useWebSocket';
 import useWebRTC from './hooks/useWebRTC';
 import ActiveChat from './states/ActiveChat';
 import { useDispatch } from 'react-redux';
+import ActiveChatV2 from './states/ActiveChatV2';
 
 export default function App() {
   const dispatch = useDispatch();
@@ -31,12 +32,15 @@ export default function App() {
     }
   }
   const { connectionStatus: webSocketConnectionStatus, socketRef } = useWebSocket("ws://localhost:8181", onMessage);
-  const { connectionStatus: webRTCConnectionStatus, webRTCRef } = useWebRTC(Platform.OS, socketRef);
+  const { connectionStatus: webRTCConnectionStatus, webRTCRef, dataChannelRef } = useWebRTC(Platform.OS, socketRef);
   // When Lobby or ActiveChat unmounts, its data gets reset.
   return (
     <PaperProvider>
       {webRTCConnectionStatus !== "connected" ?
-        (webSocketConnectionStatus === 1 ? <Lobby webRTCRef={webRTCRef} socketRef={socketRef} /> : <View><Text>Connecting...</Text></View>) : <ActiveChat />}
+        (webSocketConnectionStatus === 1 ? 
+          <Lobby webRTCRef={webRTCRef} socketRef={socketRef} /> : 
+            <View><Text>Connecting...</Text></View>) : 
+              <ActiveChat webRTCRef={webRTCRef} dataChannelRef={dataChannelRef} />}
     </PaperProvider>
   );
 }
