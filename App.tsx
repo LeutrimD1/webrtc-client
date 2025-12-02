@@ -31,7 +31,7 @@ export default function App() {
         break;
     }
   }
-  const { connectionStatus: webSocketConnectionStatus, socketRef } = useWebSocket("ws://localhost:8181", onMessage);
+  const { connectionStatus: webSocketConnectionStatus, socketRef } = useWebSocket("wss://signaling.leutrimdema.com", onMessage);
   const { connectionStatus: webRTCConnectionStatus, webRTCRef, dataChannelRef } = useWebRTC(Platform.OS, socketRef);
   // When Lobby or ActiveChat unmounts, its data gets reset.
   return (
