@@ -10,11 +10,63 @@ export default function useWebRTC(platform: string, webSocketRef: React.RefObjec
   const webRTCRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const dispatch = useDispatch();
-  //const socketGuid = useSelector((state: { self: { socketGuid: string } }) => state.self.socketGuid);
 
-  let handleAnswer = async (message: any) => { console.log("test 1"); };
+  const handleOffer = async (message: any) => {
+    console.log("Handling incoming offer...", message);
+    try {
+      if (!webRTCRef.current) {
+        console.error("WebRTC connection not initialized");
+        return;
+      }
+      
+      const remoteDesc = new RTCSessionDescription({ type: "offer", sdp: message.offer });
+      await webRTCRef.current.setRemoteDescription(remoteDesc);
 
-  let handleOffer = async (message: any) => { console.log("test 2"); };
+      // Create answer
+      const answer = await webRTCRef.current.createAnswer();
+      await webRTCRef.current.setLocalDescription(answer);
+
+      // Wait for ICE gathering
+      await new Promise<void>(resolve => {
+        if (webRTCRef.current!.iceGatheringState === "complete") {
+          resolve();
+        } else {
+          webRTCRef.current!.addEventListener("icegatheringstatechange", () => {
+            if (webRTCRef.current!.iceGatheringState === "complete") {
+              resolve();
+            }
+          });
+        }
+      });
+
+      // Send answer back
+      webSocketRef.current?.send(JSON.stringify({
+        type: "answer",
+        answer: webRTCRef.current.localDescription!.sdp,
+        to: message.from,
+        from: message.to
+      }));
+      console.log("Answer sent");
+    } catch (error) {
+      console.error("Error handling offer:", error);
+    }
+  };
+
+  const handleAnswer = async (message: any) => {
+    console.log("Handling incoming answer...", message);
+    try {
+      if (!webRTCRef.current) {
+        console.error("WebRTC connection not initialized");
+        return;
+      }
+      
+      const remoteDesc = new RTCSessionDescription({ type: "answer", sdp: message.answer });
+      await webRTCRef.current.setRemoteDescription(remoteDesc);
+      console.log("Remote description set from answer");
+    } catch (error) {
+      console.error("Error handling answer:", error);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -48,72 +100,6 @@ export default function useWebRTC(platform: string, webSocketRef: React.RefObjec
           dispatch({ type: 'chatHistory/addMessage', payload: { text: msgEvent.data, sender: 'other', timestamp: new Date() } });
         };
       };
-
-      handleOffer = async (message: any) => {
-        console.log("Handling incoming offer...");
-        const remoteDesc = new RTCSessionDescription(message.offer);
-        await webRTCRef.current!.setRemoteDescription(remoteDesc);
-      }
-
-      handleAnswer = async (message: any) => {
-        console.log("Handling incoming answer...");
-        const remoteDesc = new RTCSessionDescription(message.answer);
-        await webRTCRef.current!.setRemoteDescription(remoteDesc);
-      }
-
-      // This is for the OFFERING peer - create datachannel before making offer
-      // const dataChannel = connection.createDataChannel('chat');
-      // dataChannelRef.current = dataChannel;
-      // console.log("Creating a datachannel (offering peer)...");
-
-      // // Set up handlers for the offering peer's datachannel
-      // dataChannel.onopen = () => {
-      //   console.log("Data channel opened (offering peer)");
-      // };
-
-      // dataChannel.onclose = () => {
-      //   console.log("Data channel closed (offering peer)");
-      // };
-
-      // dataChannel.onerror = (error) => {
-      //   console.error("Data channel error (offering peer):", error);
-      // };
-
-      // dataChannel.onmessage = (event) => {
-      //   console.log("Received message via data channel (offering peer):", event.data);
-      //   dispatch({ type: 'chatHistory/addMessage', payload: { text: event.data, sender: 'other', timestamp: new Date() } });
-      // };
-
-      // const offer = await connection.createOffer();
-      // await connection.setLocalDescription(offer);
-
-      // Wait for ICE gathering to complete
-      // await new Promise<void>(resolve => {
-      //   if (connection.iceGatheringState === "complete") {
-      //     resolve();
-      //   } else {
-      //     connection.addEventListener("icegatheringstatechange", () => {
-      //       if (connection.iceGatheringState === "complete") {
-      //         resolve();
-      //       }
-      //     });
-      //   }
-      // });
-
-      // Wait for WebSocket to be ready and send offer
-      // await new Promise<void>(async (resolve) => {
-      //   const checkInterval = setInterval(() => {
-      //     if (webSocketRef.current?.readyState === 1) {
-      //       webSocketRef.current.send(JSON.stringify({
-      //         type: "offer",
-      //         offer: connection.localDescription!.sdp
-      //       }));
-      //       console.log("Offer sent via WebSocket");
-      //       clearInterval(checkInterval);
-      //       resolve();
-      //     }
-      //   }, 100);
-      // });
     })();
 
     return () => {

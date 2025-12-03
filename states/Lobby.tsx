@@ -69,18 +69,50 @@ export default function Lobby(props: { webRTCRef: RefObject<RTCPeerConnection | 
 
     const call = async (targetSocketGuid: string) => {
         console.log("Creating offer to call:", targetSocketGuid);
-        const dataChannel = props.webRTCRef.current?.createDataChannel('chat');
-        if(dataChannel)
-            props.dataChannelRef.current = dataChannel;
-        await props.webRTCRef.current?.createOffer().then(offer => {
-            props.webRTCRef.current?.setLocalDescription(offer);
-        });
-        props.socketRef.current?.send(JSON.stringify({
-            type: "offer",
-            offer: props.webRTCRef.current?.localDescription!.sdp,
-            from: selfSocketId,
-            to: targetSocketGuid
-        }));
+        try {
+            const dataChannel = props.webRTCRef.current?.createDataChannel('chat');
+            if (dataChannel) {
+                props.dataChannelRef.current = dataChannel;
+                dataChannel.onopen = () => {
+                    console.log("Data channel opened (offering peer)");
+                };
+                dataChannel.onclose = () => {
+                    console.log("Data channel closed");
+                };
+                dataChannel.onerror = (error) => {
+                    console.error("Data channel error:", error);
+                };
+                dataChannel.onmessage = (event) => {
+                    console.log("Received message via data channel:", event.data);
+                };
+            }
+
+            const offer = await props.webRTCRef.current?.createOffer();
+            await props.webRTCRef.current?.setLocalDescription(offer);
+
+            // Wait for ICE gathering
+            await new Promise<void>(resolve => {
+                if (props.webRTCRef.current!.iceGatheringState === "complete") {
+                    resolve();
+                } else {
+                    props.webRTCRef.current!.addEventListener("icegatheringstatechange", () => {
+                        if (props.webRTCRef.current!.iceGatheringState === "complete") {
+                            resolve();
+                        }
+                    });
+                }
+            });
+
+            props.socketRef.current?.send(JSON.stringify({
+                type: "offer",
+                offer: props.webRTCRef.current?.localDescription!.sdp,
+                from: selfSocketId,
+                to: targetSocketGuid
+            }));
+            console.log("Offer sent to:", targetSocketGuid);
+        } catch (error) {
+            console.error("Error creating offer:", error);
+        }
     };
 
     return (
