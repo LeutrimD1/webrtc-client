@@ -34,7 +34,7 @@ export default function App() {
         break;
     }
   }
-  const { connectionStatus: webSocketConnectionStatus, socketRef } = useWebSocket("ws://localhost:8181", onMessage);
+  const { connectionStatus: webSocketConnectionStatus, socketRef } = useWebSocket("wss://signaling.leutrimdema.com", onMessage);
   const { connectionStatus: webRTCConnectionStatus, webRTCRef, dataChannelRef, handleAnswer, handleOffer } = useWebRTC(Platform.OS, socketRef);
 
   // Close WebSocket when WebRTC connection is established
