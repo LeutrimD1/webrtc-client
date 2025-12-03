@@ -6,6 +6,7 @@ import useWebRTC from './hooks/useWebRTC';
 import ActiveChat from './states/ActiveChat';
 import { useDispatch } from 'react-redux';
 import ActiveChatV2 from './states/ActiveChatV2';
+import { useEffect } from 'react';
 
 export default function App() {
   const dispatch = useDispatch();
@@ -35,6 +36,15 @@ export default function App() {
   }
   const { connectionStatus: webSocketConnectionStatus, socketRef } = useWebSocket("ws://localhost:8181", onMessage);
   const { connectionStatus: webRTCConnectionStatus, webRTCRef, dataChannelRef, handleAnswer, handleOffer } = useWebRTC(Platform.OS, socketRef);
+
+  // Close WebSocket when WebRTC connection is established
+  useEffect(() => {
+    if (webRTCConnectionStatus === "connected") {
+      console.log("WebRTC connection established, closing WebSocket");
+      socketRef.current?.close();
+    }
+  }, [webRTCConnectionStatus, socketRef]);
+
   // When Lobby or ActiveChat unmounts, its data gets reset.
   return (
     <PaperProvider>
