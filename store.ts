@@ -50,7 +50,7 @@ const signalServer = createSlice({
 });
 
 
-export const selectSocketId = (state: {localData: {socketConnectionGuid: string}}) => state.localData.socketConnectionGuid;
+export const selectSocketId = (state: {self: {socketGuid: string}}) => state.self.socketGuid;
 export const selectConnectionStatus = (state: {signalServer: {connectionStatus: number}}) => state.signalServer.connectionStatus;
 
 export const signalServerActions = signalServer.actions;
